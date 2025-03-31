@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'started_screen.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,12 +16,19 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToHome();
   }
 
-  void _navigateToHome() async {
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
-    
-    Navigator.pushReplacementNamed(context, '/main');
-  }
+void _navigateToHome() async {
+  await Future.delayed(const Duration(seconds: 3));
+  if (!mounted) return;
+  Navigator.pushReplacement(
+    context,
+    PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 1000),
+      pageBuilder: (_, __, ___) => const StartedScreen(),
+      transitionsBuilder: (_, a, __, c) =>
+          FadeTransition(opacity: a, child: c),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
