@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../providers/session_provider.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,91 +15,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  XFile? _selectedImage;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-    _nameController = TextEditingController();
-    _emailController = TextEditingController();
-  }
-
-  Future<void> _loadProfile() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _pickImage() async {
+    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
     setState(() {
-      _nameController.text = prefs.getString('name') ?? '';
-      _emailController.text = prefs.getString('email') ?? '';
+      _selectedImage = image;
     });
   }
 
-  Future<void> _saveProfile() async {
+  void _saveProfile() {
     if (_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('name', _nameController.text);
-      await prefs.setString('email', _emailController.text);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil salvo com sucesso!')),
-      );
+      context.read<SessionProvider>().updateProfile(
+            _nameController.text,
+            _emailController.text,
+            _selectedImage,
+          );
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final session = context.watch<SessionProvider>();
+
+    return session.name == null ? _buildForm() : _buildProfile(session);
+  }
+
+  Widget _buildForm() {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meu Perfil'),
-      ),
+      appBar: AppBar(title: const Text('Perfil')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blue[100],
-                child: const Icon(Icons.person, size: 50, color: Colors.blue),
+              GestureDetector(
+                onTap: _pickImage,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.blue[100],
+                  backgroundImage: _selectedImage != null
+                      ? FileImage(File(_selectedImage!.path))
+                      : null,
+                  child: _selectedImage == null
+                      ? const Icon(Icons.camera_alt, size: 40)
+                      : null,
+                ),
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Nome',
-                  prefixIcon: Icon(Icons.person_outline),
+                  prefixIcon: Icon(Icons.person),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor insira seu nome';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Insira seu nome' : null,
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: 'E-mail',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor insira seu e-mail';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Insira seu e-mail' : null,
               ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
                 icon: const Icon(Icons.save),
                 label: const Text('Salvar Perfil'),
                 onPressed: _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfile(SessionProvider session) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Perfil')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: session.photo != null
+                  ? FileImage(File(session.photo!.path))
+                  : null,
+              child: session.photo == null
+                  ? const Icon(Icons.person, size: 50)
+                  : null,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              session.name!,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              session.email!,
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ],
         ),
       ),
     );
