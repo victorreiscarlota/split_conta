@@ -30,9 +30,10 @@ class _StartedScreenState extends State<StartedScreen> {
               child: RiveAnimation.asset(
                 'assets/animations/started.riv',
                 controllers: [_controller],
-                fit: BoxFit.contain,
+                fit: BoxFit.cover,
+                ),
               ),
-            ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: AnimatedTextKit(
